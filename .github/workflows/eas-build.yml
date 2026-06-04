@@ -34,20 +34,31 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
 
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+
+      - name: Disable minification and fix gradle
+        run: |
+          # Disable R8/ProGuard (causes issues in CI)
+          sed -i 's/def enableProguardInReleaseBuilds = .*/def enableProguardInReleaseBuilds = false/' android/app/build.gradle || true
+          # Increase Gradle JVM memory
+          echo "org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=512m" >> android/gradle.properties
+          echo "org.gradle.daemon=false" >> android/gradle.properties
+          echo "org.gradle.parallel=false" >> android/gradle.properties
+
       - name: Create signing keystore
         run: |
           mkdir -p ~/.android
           keytool -genkeypair \
             -keystore ~/.android/zahra.keystore \
-            -alias zahra \
-            -keyalg RSA -keysize 2048 -validity 10000 \
+            -alias zahra -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "CN=Zahra,O=Zahra,C=MA" \
             -storepass zahra123 -keypass zahra123 -noprompt
 
       - name: Grant Gradle permissions
         run: chmod +x android/gradlew
 
-      - name: Build Release APK (JS bundle included automatically)
+      - name: Build Release APK
         working-directory: android
         run: |
           ./gradlew assembleRelease \
@@ -55,7 +66,7 @@ jobs:
             -Pandroid.injected.signing.store.password=zahra123 \
             -Pandroid.injected.signing.key.alias=zahra \
             -Pandroid.injected.signing.key.password=zahra123 \
-            --no-daemon
+            --no-daemon --stacktrace 2>&1 | tail -80
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -72,8 +83,8 @@ jobs:
           body: |
             ## تطبيق زهرة ✨
 
-            ### تثبيت على هاتف أندرويد:
-            1. اضغط **zahra.apk** أدناه لتنزيله
+            ### تثبيت على أندرويد:
+            1. حمّل **zahra.apk** أدناه
             2. افتحه على هاتفك
             3. اسمح بالتثبيت من مصادر غير معروفة
             4. اضغط **تثبيت** 🎉
