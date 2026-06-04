@@ -1,5 +1,3 @@
-// Islamic utilities - dates, adhkar, etc.
-
 export interface IslamicDate {
   day: number;
   month: number;
@@ -9,14 +7,13 @@ export interface IslamicDate {
 }
 
 const HIJRI_MONTHS = [
-  'محرم','صفر','ربيع الأول','ربيع الثاني',
-  'جمادى الأولى','جمادى الثانية','رجب','شعبان',
-  'رمضان','شوال','ذو القعدة','ذو الحجة',
+  'محرم', 'صفر', 'ربيع الأول', 'ربيع الثاني',
+  'جمادى الأولى', 'جمادى الثانية', 'رجب', 'شعبان',
+  'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة',
 ];
 
 export function getIslamicDate(): IslamicDate {
   const today = new Date();
-  // Simple approximation — for production use hijri-js or similar
   const gregorianYear = today.getFullYear();
   const gregorianMonth = today.getMonth() + 1;
   const gregorianDay = today.getDate();
@@ -31,15 +28,15 @@ export function getIslamicDate(): IslamicDate {
   return {
     day: hijriDay,
     month: hijriMonth,
-    monthName: HIJRI_MONTHS[hijriMonth - 1] || '',
+    monthName: HIJRI_MONTHS[hijriMonth - 1] ?? '',
     year: hijriYear,
-    display: `${hijriDay} ${HIJRI_MONTHS[hijriMonth - 1]} ${hijriYear} هـ`,
+    display: `${hijriDay} ${HIJRI_MONTHS[hijriMonth - 1] ?? ''} ${hijriYear} هـ`,
   };
 }
 
 export function getDayName(): string {
-  const days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
-  return days[new Date().getDay()];
+  const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  return days[new Date().getDay()] ?? '';
 }
 
 export function getTimeOfDay(): 'morning' | 'afternoon' | 'evening' | 'night' {
@@ -51,23 +48,23 @@ export function getTimeOfDay(): 'morning' | 'afternoon' | 'evening' | 'night' {
 }
 
 export const DAILY_WORDS: string[] = [
-  '"وَمَن يَتَوَكَّلْ عَلَى اللَّهِ فَهُوَ حَسْبُهُ" — الطلاق',
-  '"إِنَّ مَعَ الْعُسْرِ يُسْرًا" — الشرح',
-  '"وَقُل رَّبِّ زِدْنِي عِلْمًا" — طه',
-  '"حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ" — آل عمران',
-  '"رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً" — البقرة',
-  '"اللَّهُ لَطِيفٌ بِعِبَادِهِ" — الشورى',
-  '"وَاذْكُر رَّبَّكَ كَثِيرًا" — آل عمران',
-  '"الصَّبْرُ مِفْتَاحُ الْفَرَج" — حديث شريف',
-  '"فَإِنَّ مَعَ الْعُسْرِ يُسْرًا" — الشرح',
-  '"رَبِّ اشْرَحْ لِي صَدْرِي" — طه',
-  '"وَلَذِكْرُ اللَّهِ أَكْبَرُ" — العنكبوت',
-  '"إِنَّ اللَّهَ مَعَ الصَّابِرِينَ" — البقرة',
+  '"وَمَن يَتَوَكَّلْ عَلَى اللَّهِ فَهُوَ حَسْبُهُ"',
+  '"إِنَّ مَعَ الْعُسْرِ يُسْرًا"',
+  '"حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ"',
+  '"اللَّهُ لَطِيفٌ بِعِبَادِهِ"',
+  '"وَاذْكُر رَّبَّكَ كَثِيرًا"',
+  '"رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً"',
+  '"الصَّبْرُ مِفْتَاحُ الْفَرَج"',
+  '"بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ"',
+  '"وَقُل رَّبِّ زِدْنِي عِلْمًا"',
+  '"رَبِّ اشْرَحْ لِي صَدْرِي"',
+  '"سُبْحَانَ اللَّهِ وَبِحَمْدِهِ"',
+  '"لَا إِلَهَ إِلَّا أَنتَ سُبْحَانَكَ"',
+  '"اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْهَمِّ وَالْحَزَنِ"',
+  '"رَبِّ إِنِّي لِمَا أَنزَلْتَ إِلَيَّ مِنْ خَيْرٍ فَقِيرٌ"',
 ];
 
 export function getDailyWord(): string {
-  const dayOfYear = Math.floor(
-    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
-  );
-  return DAILY_WORDS[dayOfYear % DAILY_WORDS.length];
+  const day = new Date().getDate();
+  return DAILY_WORDS[day % DAILY_WORDS.length] ?? DAILY_WORDS[0] ?? '';
 }

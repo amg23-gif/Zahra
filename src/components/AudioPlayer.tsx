@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,15 +9,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors } from '@/src/theme/colors';
-import {
-  playSurah,
-  stopAudio,
-  downloadSurah,
-  isSurahDownloaded,
-  ReciterId,
-} from '@/src/lib/offline-audio';
-import { Audio } from 'expo-av';
+import colors from '@/constants/colors';
+import { downloadSurah, isSurahDownloaded, playSurah, ReciterId } from '@/src/lib/offline-audio';
+import type { Audio } from 'expo-av';
+
+const C = colors.light;
 
 interface AudioPlayerProps {
   surahNumber: number;
@@ -43,16 +39,18 @@ export function AudioPlayer({
   const [downloaded, setDownloaded] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
 
   useEffect(() => {
     checkDownloaded();
     return () => {
-      stopAudio();
+      soundRef.current?.unloadAsync().catch(() => {});
+      soundRef.current = null;
     };
   }, [surahNumber, reciterId]);
 
   const checkDownloaded = async () => {
+    if (Platform.OS === 'web') return;
     const dl = await isSurahDownloaded(reciterId, surahNumber);
     setDownloaded(dl);
   };
@@ -62,21 +60,22 @@ export function AudioPlayer({
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     if (isPlaying) {
-      await stopAudio();
+      await soundRef.current?.stopAsync();
+      await soundRef.current?.unloadAsync();
+      soundRef.current = null;
       setIsPlaying(false);
-      setSound(null);
     } else {
       setIsLoading(true);
       try {
         const s = await playSurah(reciterId, surahNumber, () => {
           setIsPlaying(false);
-          setSound(null);
+          soundRef.current = null;
           if (hasNext) onNext?.();
         });
-        setSound(s);
+        soundRef.current = s;
         setIsPlaying(true);
-      } catch (e) {
-        console.warn('Playback error:', e);
+      } catch {
+        // ignore
       } finally {
         setIsLoading(false);
       }
@@ -84,13 +83,16 @@ export function AudioPlayer({
   };
 
   const handleDownload = async () => {
-    if (downloading || downloaded) return;
+    if (downloading || downloaded || Platform.OS === 'web') return;
+    if (Platform.OS !== 'web') {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     setDownloading(true);
     try {
-      await downloadSurah(reciterId, surahNumber, setDownloadProgress);
+      await downloadSurah(reciterId, surahNumber, (p) => setDownloadProgress(p));
       setDownloaded(true);
-    } catch (e) {
-      console.warn('Download error:', e);
+    } catch {
+      // ignore
     } finally {
       setDownloading(false);
       setDownloadProgress(0);
@@ -105,29 +107,25 @@ export function AudioPlayer({
         <TouchableOpacity
           onPress={onPrevious}
           disabled={!hasPrevious}
-          style={[styles.ctrl, !hasPrevious && styles.disabled]}
+          style={[styles.navBtn, !hasPrevious && styles.disabled]}
         >
-          <Ionicons name="play-skip-back" size={28} color={colors.primary} />
+          <Ionicons name="play-skip-forward" size={28} color={C.primary} />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handlePlayPause} style={styles.playBtn}>
+        <TouchableOpacity onPress={handlePlayPause} style={styles.playBtn} activeOpacity={0.8}>
           {isLoading ? (
-            <ActivityIndicator color={colors.white} />
+            <ActivityIndicator color={C.white} size="small" />
           ) : (
-            <Ionicons
-              name={isPlaying ? 'pause' : 'play'}
-              size={36}
-              color={colors.white}
-            />
+            <Ionicons name={isPlaying ? 'pause' : 'play'} size={36} color={C.white} />
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
           onPress={onNext}
           disabled={!hasNext}
-          style={[styles.ctrl, !hasNext && styles.disabled]}
+          style={[styles.navBtn, !hasNext && styles.disabled]}
         >
-          <Ionicons name="play-skip-forward" size={28} color={colors.primary} />
+          <Ionicons name="play-skip-back" size={28} color={C.primary} />
         </TouchableOpacity>
       </View>
 
@@ -138,17 +136,23 @@ export function AudioPlayer({
           style={styles.downloadBtn}
         >
           {downloading ? (
-            <Text style={styles.downloadText}>
-              جاري التنزيل... {Math.round(downloadProgress * 100)}%
-            </Text>
-          ) : downloaded ? (
-            <Text style={[styles.downloadText, { color: colors.success }]}>
-              محفوظة بدون نت ✓
-            </Text>
+            <View style={styles.downloadRow}>
+              <ActivityIndicator size="small" color={C.primary} />
+              <Text style={styles.downloadText}>
+                {Math.round(downloadProgress * 100)}٪
+              </Text>
+            </View>
           ) : (
-            <Text style={styles.downloadText}>
-              تنزيل للاستماع بدون نت
-            </Text>
+            <View style={styles.downloadRow}>
+              <Ionicons
+                name={downloaded ? 'checkmark-circle' : 'cloud-download-outline'}
+                size={20}
+                color={downloaded ? C.success : C.primary}
+              />
+              <Text style={[styles.downloadText, downloaded && { color: C.success }]}>
+                {downloaded ? 'محفوظة بدون نت' : 'تنزيل بدون نت'}
+              </Text>
+            </View>
           )}
         </TouchableOpacity>
       )}
@@ -158,54 +162,67 @@ export function AudioPlayer({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surfaceWarm,
+    backgroundColor: C.card,
     borderRadius: 20,
     padding: 20,
+    margin: 16,
     alignItems: 'center',
-    gap: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 5,
   },
   surahName: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    color: colors.textPrimary,
-    textAlign: 'center',
+    fontSize: 22,
+    fontWeight: '700',
+    color: C.primary,
+    marginBottom: 16,
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 24,
-  },
-  ctrl: {
-    padding: 8,
+    marginBottom: 12,
   },
   playBtn: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.primary,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 6,
   },
-  disabled: {
-    opacity: 0.35,
+  navBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: C.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+  disabled: { opacity: 0.35 },
   downloadBtn: {
+    marginTop: 8,
     paddingVertical: 8,
     paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: C.secondary,
+  },
+  downloadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   downloadText: {
     fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
+    color: C.primary,
+    fontWeight: '600',
   },
+  success: { color: C.success },
 });

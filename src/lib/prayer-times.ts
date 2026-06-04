@@ -3,6 +3,7 @@ import { Coordinates, CalculationMethod, PrayerTimes, Prayer, Qibla } from 'adha
 export interface PrayerTime {
   name: string;
   arabicName: string;
+  icon: string;
   time: Date;
   prayer: Prayer;
 }
@@ -19,7 +20,7 @@ export interface DailyPrayers {
 
 export function calculatePrayers(latitude: number, longitude: number, date?: Date): DailyPrayers {
   const coords = new Coordinates(latitude, longitude);
-  const d = date || new Date();
+  const d = date ?? new Date();
   const params = CalculationMethod.MuslimWorldLeague();
   const prayerTimes = new PrayerTimes(coords, d, params);
   const qibla = Qibla(coords);
@@ -38,18 +39,18 @@ export function calculatePrayers(latitude: number, longitude: number, date?: Dat
 export function getPrayerList(latitude: number, longitude: number): PrayerTime[] {
   const prayers = calculatePrayers(latitude, longitude);
   return [
-    { name: 'Fajr', arabicName: 'الفجر', time: prayers.fajr, prayer: Prayer.Fajr },
-    { name: 'Dhuhr', arabicName: 'الظهر', time: prayers.dhuhr, prayer: Prayer.Dhuhr },
-    { name: 'Asr', arabicName: 'العصر', time: prayers.asr, prayer: Prayer.Asr },
-    { name: 'Maghrib', arabicName: 'المغرب', time: prayers.maghrib, prayer: Prayer.Maghrib },
-    { name: 'Isha', arabicName: 'العشاء', time: prayers.isha, prayer: Prayer.Isha },
+    { name: 'Fajr', arabicName: 'الفجر', icon: '🌙', time: prayers.fajr, prayer: Prayer.Fajr },
+    { name: 'Dhuhr', arabicName: 'الظهر', icon: '☀️', time: prayers.dhuhr, prayer: Prayer.Dhuhr },
+    { name: 'Asr', arabicName: 'العصر', icon: '🌤️', time: prayers.asr, prayer: Prayer.Asr },
+    { name: 'Maghrib', arabicName: 'المغرب', icon: '🌅', time: prayers.maghrib, prayer: Prayer.Maghrib },
+    { name: 'Isha', arabicName: 'العشاء', icon: '🌙', time: prayers.isha, prayer: Prayer.Isha },
   ];
 }
 
 export function getNextPrayer(latitude: number, longitude: number): PrayerTime | null {
   const now = new Date();
   const list = getPrayerList(latitude, longitude);
-  return list.find((p) => p.time > now) || null;
+  return list.find((p) => p.time > now) ?? null;
 }
 
 export function formatPrayerTime(date: Date): string {

@@ -1,5 +1,5 @@
-import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 export interface UserLocation {
   latitude: number;
@@ -8,31 +8,30 @@ export interface UserLocation {
 }
 
 const LOCATION_KEY = 'zahra_location';
+const DEFAULT_LOCATION: UserLocation = { latitude: 33.5731, longitude: -7.5898, city: 'الدار البيضاء' };
 
 export async function requestAndGetLocation(): Promise<UserLocation> {
-  // Try cached first
-  const cached = await AsyncStorage.getItem(LOCATION_KEY);
-  if (cached) {
-    const parsed = JSON.parse(cached) as UserLocation;
-    // Refresh in background
-    refreshLocation();
-    return parsed;
-  }
+  if (Platform.OS === 'web') return DEFAULT_LOCATION;
 
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  if (status !== 'granted') {
-    // Default: Casablanca, Morocco
-    return { latitude: 33.5731, longitude: -7.5898, city: 'الدار البيضاء' };
+  try {
+    const cached = await AsyncStorage.getItem(LOCATION_KEY);
+    if (cached) {
+      refreshLocationInBackground();
+      return JSON.parse(cached) as UserLocation;
+    }
+    return await fetchLocation();
+  } catch {
+    return DEFAULT_LOCATION;
   }
-
-  return await fetchLocation();
 }
 
 async function fetchLocation(): Promise<UserLocation> {
   try {
-    const loc = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
+    const Location = await import('expo-location');
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return DEFAULT_LOCATION;
+
+    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
     const result: UserLocation = {
       latitude: loc.coords.latitude,
       longitude: loc.coords.longitude,
@@ -49,15 +48,12 @@ async function fetchLocation(): Promise<UserLocation> {
     await AsyncStorage.setItem(LOCATION_KEY, JSON.stringify(result));
     return result;
   } catch {
-    return { latitude: 33.5731, longitude: -7.5898, city: 'الدار البيضاء' };
+    return DEFAULT_LOCATION;
   }
 }
 
-async function refreshLocation(): Promise<void> {
+async function refreshLocationInBackground(): Promise<void> {
   try {
-    const { status } = await Location.getForegroundPermissionsAsync();
-    if (status === 'granted') {
-      await fetchLocation();
-    }
+    await fetchLocation();
   } catch {}
 }
