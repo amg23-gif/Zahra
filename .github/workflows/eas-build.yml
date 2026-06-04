@@ -31,25 +31,18 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Generate native Android project (expo prebuild)
+      - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Bundle JavaScript into APK assets
-        run: |
-          mkdir -p android/app/src/main/assets
-          npx react-native bundle \
-            --platform android \
-            --dev false \
-            --entry-file node_modules/expo-router/entry.js \
-            --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res
+      - name: Create assets directory
+        run: mkdir -p android/app/src/main/assets
 
       - name: Grant Gradle permissions
         run: chmod +x android/gradlew
 
-      - name: Build APK
+      - name: Build APK with JS bundle
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug -PbundleInDebug=true --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -75,9 +68,9 @@ jobs:
             ### مميزات التطبيق:
             - 🕌 مواقيت الصلاة + القبلة (بدون نت)
             - 📖 القرآن — 114 سورة، 4 مؤذنين
-            - 📿 الأذكار — صباح/مساء/نوم/بعد الصلاة
+            - 📿 الأذكار — صباح/مساء/نوم
             - 🔢 المسبحة — مع اهتزاز
             - 🔔 إشعارات الأذان يومياً
-            - 💬 ترحيب صوتي بالدارجة المغربية باسم زهرة
+            - 💬 ترحيب صوتي بالدارجة المغربية
           files: android/app/build/outputs/apk/debug/app-debug.apk
           asset_name: zahra.apk
