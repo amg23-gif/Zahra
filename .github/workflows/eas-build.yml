@@ -34,28 +34,41 @@ jobs:
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Create assets directory
-        run: mkdir -p android/app/src/main/assets
+      - name: Create signing keystore
+        run: |
+          mkdir -p ~/.android
+          keytool -genkeypair \
+            -keystore ~/.android/zahra.keystore \
+            -alias zahra \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Zahra,O=Zahra,C=MA" \
+            -storepass zahra123 -keypass zahra123 -noprompt
 
       - name: Grant Gradle permissions
         run: chmod +x android/gradlew
 
-      - name: Build APK with JS bundle
+      - name: Build Release APK (JS bundle included automatically)
         working-directory: android
-        run: ./gradlew assembleDebug -PbundleInDebug=true --no-daemon
+        run: |
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$HOME/.android/zahra.keystore \
+            -Pandroid.injected.signing.store.password=zahra123 \
+            -Pandroid.injected.signing.key.alias=zahra \
+            -Pandroid.injected.signing.key.password=zahra123 \
+            --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zahra-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: zahra-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 90
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}.0
-          name: "📱 زهرة APK — Build ${{ github.run_number }}"
+          name: "📱 زهرة — Build ${{ github.run_number }}"
           body: |
             ## تطبيق زهرة ✨
 
@@ -64,13 +77,5 @@ jobs:
             2. افتحه على هاتفك
             3. اسمح بالتثبيت من مصادر غير معروفة
             4. اضغط **تثبيت** 🎉
-
-            ### مميزات التطبيق:
-            - 🕌 مواقيت الصلاة + القبلة (بدون نت)
-            - 📖 القرآن — 114 سورة، 4 مؤذنين
-            - 📿 الأذكار — صباح/مساء/نوم
-            - 🔢 المسبحة — مع اهتزاز
-            - 🔔 إشعارات الأذان يومياً
-            - 💬 ترحيب صوتي بالدارجة المغربية
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: android/app/build/outputs/apk/release/app-release.apk
           asset_name: zahra.apk
