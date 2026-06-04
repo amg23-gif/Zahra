@@ -31,34 +31,53 @@ jobs:
       - name: Install dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Generate native Android project
+      - name: Generate native Android project (expo prebuild)
         run: npx expo prebuild --platform android --no-install
+
+      - name: Bundle JavaScript into APK assets
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file node_modules/expo-router/entry.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
 
       - name: Grant Gradle permissions
         run: chmod +x android/gradlew
 
-      - name: Build debug APK
+      - name: Build APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zahra-debug-apk
+          name: zahra-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 90
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
+          tag_name: v${{ github.run_number }}.0
           name: "📱 زهرة APK — Build ${{ github.run_number }}"
           body: |
             ## تطبيق زهرة ✨
 
             ### تثبيت على هاتف أندرويد:
-            1. حمّل **zahra-debug.apk** من الأسفل
-            2. افتح الملف على هاتفك
+            1. اضغط **zahra.apk** أدناه لتنزيله
+            2. افتحه على هاتفك
             3. اسمح بالتثبيت من مصادر غير معروفة
-            4. اضغط **تثبيت** — انتهى!
+            4. اضغط **تثبيت** 🎉
+
+            ### مميزات التطبيق:
+            - 🕌 مواقيت الصلاة + القبلة (بدون نت)
+            - 📖 القرآن — 114 سورة، 4 مؤذنين
+            - 📿 الأذكار — صباح/مساء/نوم/بعد الصلاة
+            - 🔢 المسبحة — مع اهتزاز
+            - 🔔 إشعارات الأذان يومياً
+            - 💬 ترحيب صوتي بالدارجة المغربية باسم زهرة
           files: android/app/build/outputs/apk/debug/app-debug.apk
+          asset_name: zahra.apk
