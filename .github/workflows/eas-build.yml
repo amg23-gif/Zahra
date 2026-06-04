@@ -18,7 +18,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -27,7 +26,7 @@ jobs:
           java-version: '17'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
@@ -46,22 +45,19 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
 
-      - name: Create GitHub Release with APK
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: "زهرة APK — Build ${{ github.run_number }}"
           body: |
-            ## تطبيق زهرة — نسخة جديدة
+            ## تطبيق زهرة ✨
 
-            ### كيفية التثبيت على الهاتف:
-            1. حمّل ملف `zahra-debug.apk` أدناه
-            2. افتح الملف على هاتفك الأندرويد
-            3. اسمح بتثبيت التطبيقات من مصادر غير معروفة عند الطلب
-            4. اضغط تثبيت
-
-            > ملاحظة: هذه نسخة تجريبية (debug). للنشر على Google Play اتصل بنا.
+            ### تثبيت التطبيق على هاتف أندرويد:
+            1. حمّل ملف **zahra-debug.apk** من الأسفل
+            2. افتحه على هاتفك
+            3. اسمح بالتثبيت من مصادر غير معروفة
+            4. اضغط **تثبيت**
           files: android/app/build/outputs/apk/debug/app-debug.apk
-          asset_name: zahra-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
