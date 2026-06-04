@@ -8,13 +8,11 @@ import { getPhrase } from './darija';
 
 export const ADHAN_TASK = 'ZAHRA_ADHAN_BACKGROUND';
 
-// Configure notifications handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    shouldShowBanner: true,
   }),
 });
 
@@ -24,7 +22,6 @@ export async function requestNotificationPermission(): Promise<boolean> {
       allowAlert: true,
       allowBadge: true,
       allowSound: true,
-      allowCriticalAlerts: true,
     },
   });
   return status === 'granted';
@@ -36,7 +33,6 @@ export async function scheduleAllAdhan(): Promise<void> {
   const granted = await requestNotificationPermission();
   if (!granted) return;
 
-  // Cancel all existing adhan notifications
   await Notifications.cancelAllScheduledNotificationsAsync();
 
   const location = await requestAndGetLocation();
@@ -53,10 +49,8 @@ export async function scheduleAllAdhan(): Promise<void> {
   for (const prayer of prayerList) {
     const prayerTime = new Date(prayer.time);
     const now = new Date();
-
     if (prayerTime <= now) continue;
 
-    // Schedule adhan notification
     await Notifications.scheduleNotificationAsync({
       content: {
         title: `🕌 ${prayer.name}`,
@@ -65,29 +59,28 @@ export async function scheduleAllAdhan(): Promise<void> {
         data: { type: 'adhan', prayer: prayer.name },
       },
       trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: prayerTime,
-      } as Notifications.DateTriggerInput,
+      },
     });
 
-    // Schedule 10-minute warning before adhan
     const warnTime = new Date(prayerTime.getTime() - 10 * 60 * 1000);
     if (warnTime > now) {
       await Notifications.scheduleNotificationAsync({
         content: {
           title: `⏰ قريباً — ${prayer.name}`,
           body: getPhrase('beforeAdhan'),
-          sound: undefined,
           data: { type: 'before_adhan', prayer: prayer.name },
         },
         trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: warnTime,
-        } as Notifications.DateTriggerInput,
+        },
       });
     }
   }
 }
 
-// Background fetch to reschedule daily
 if (Platform.OS !== 'web') {
   TaskManager.defineTask(ADHAN_TASK, async () => {
     try {
@@ -103,7 +96,7 @@ export async function registerBackgroundAdhanTask(): Promise<void> {
   if (Platform.OS === 'web') return;
   try {
     await BackgroundFetch.registerTaskAsync(ADHAN_TASK, {
-      minimumInterval: 60 * 60 * 6, // every 6 hours
+      minimumInterval: 60 * 60 * 6,
       stopOnTerminate: false,
       startOnBoot: true,
     });
