@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-android:
     name: Build Android APK
@@ -43,21 +46,19 @@ jobs:
         with:
           name: zahra-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+          retention-days: 90
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: "زهرة APK — Build ${{ github.run_number }}"
+          name: "📱 زهرة APK — Build ${{ github.run_number }}"
           body: |
             ## تطبيق زهرة ✨
 
-            ### تثبيت التطبيق على هاتف أندرويد:
-            1. حمّل ملف **zahra-debug.apk** من الأسفل
-            2. افتحه على هاتفك
+            ### تثبيت على هاتف أندرويد:
+            1. حمّل **zahra-debug.apk** من الأسفل
+            2. افتح الملف على هاتفك
             3. اسمح بالتثبيت من مصادر غير معروفة
-            4. اضغط **تثبيت**
+            4. اضغط **تثبيت** — انتهى!
           files: android/app/build/outputs/apk/debug/app-debug.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
